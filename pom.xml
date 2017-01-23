@@ -4,14 +4,14 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <groupId>com.reljicb.user-checkstyle</groupId>
-    <artifactId>user-checkstyle-core</artifactId>
+    <groupId>org.reljicb.user-checkstyle</groupId>
+    <artifactId>codingstyle-core</artifactId>
     <version>1.0-SNAPSHOT</version>
 
     <properties>
         <maven.compiler.source>1.8</maven.compiler.source>
         <s3.wagon.version>1.2.1</s3.wagon.version>
-        <s3.bucket.name>artifacts3.reljicb.org</s3.bucket.name>
+        <s3.bucket.name>maven-repository.reljicb.org</s3.bucket.name>
     </properties>
 
     <repositories>
