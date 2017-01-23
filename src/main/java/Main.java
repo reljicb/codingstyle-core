@@ -1,29 +1,55 @@
+import com.fasterxml.jackson.dataformat.xml.JacksonXmlModule;
 import com.fasterxml.jackson.dataformat.xml.XmlMapper;
 import com.google.common.collect.Lists;
 import org.apache.commons.exec.*;
+import org.reljicb.usercheckstyle.beans.CSError;
 import org.reljicb.usercheckstyle.beans.CheckStyle;
+import org.reljicb.usercheckstyle.beans.TargetFile;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
-import java.net.URL;
 import java.util.List;
+import java.util.stream.Collectors;
 
 public class Main
 {
-
     public static void main(String[] args) throws IOException, InterruptedException
     {
-        new Main().run(args);
+        Main app = new Main();
+        List<TargetFile> ret = app.run();
+        ret.forEach(targetFile ->
+              {
+                  System.out.println(targetFile.getName());
+                  System.out.println("------------------------");
+                  targetFile.getErrors().stream()
+                        .map(CSError::toString)
+                        .forEach(System.out::println);
+              }
+        );
+
     }
 
-    public void run(String[] args) throws IOException, InterruptedException
+    private static String reformatPath(final String path)
     {
-        final URL CHECK_STYLE_PATH = this.getClass().getClassLoader().getResource("./lib");
-        final URL RULES_XML_PATH = this.getClass().getClassLoader().getResource("./rules");
+        if (File.separator.equals("\\"))
+        {
+            return path.replace("/C:/", "c:\\").replace("/", "\\");
+        }
+        return path;
+    }
 
-        final String JAVA_FILE_PATH = "/Users/bojanreljic/development/workspace/full-stack-validation/src/main/java/com/reljicb/FullStackValidationApplication.java";
-//        final String OUTPUT_FILE_PATH = "/Users/bojanreljic/tmp/out.txt";
+    public List<TargetFile> run() throws IOException, InterruptedException
+    {
+        final String CHECK_STYLE_PATH = reformatPath(this.getClass().getClassLoader().getResource("./lib").getPath());
+        final String RULES_XML_PATH = reformatPath(this.getClass().getClassLoader().getResource("./rules").getPath());
+
+        final String ACC_DETAILS_PATH = "C:\\Users\\ER266\\development\\workspace\\rbcone-ao-accdetail\\rbcone-ao-account-details-web\\src\\main\\java";
+        final String CODINGSTYLE_GIT_PATH = "C:\\TEMP\\codingstyle-git\\src";
+        final String FULL_STACK_VALIDATION_PATH = "/Users/bojanreljic/development/workspace/full-stack-validation/src/main/java/";
+        final String JAVA_FILE_PATH = FULL_STACK_VALIDATION_PATH;
+
+        //        final String OUTPUT_FILE_PATH = "/Users/bojanreljic/tmp/out.txt";
 
         final String javaHome = System.getProperty("java.home");
 
@@ -36,7 +62,7 @@ public class Main
 
         ExecuteWatchdog watchdog = new ExecuteWatchdog(15000);
         executor.setWatchdog(watchdog);
-//        executor.setExitValues(new int[] { 0, 255 });
+        //        executor.setExitValues(new int[] { 0, 255 });
 
         int exitValue = -1;
         try
@@ -44,9 +70,9 @@ public class Main
             exitValue = executor.execute(new CommandLine(javaHome + File.separator
                   + "bin" + File.separator + "java")
                   .addArgument("-jar")
-                  .addArgument(String.format("%s/checkstyle-7.4-all.jar", CHECK_STYLE_PATH.getPath()))
+                  .addArgument(String.format("%s/checkstyle-7.4-all.jar", CHECK_STYLE_PATH))
                   .addArgument("-c")
-                  .addArgument(String.format("%s/google_checks.xml", RULES_XML_PATH.getPath()))
+                  .addArgument(String.format("%s/google_checks.xml", RULES_XML_PATH))
                   .addArgument("-f").addArgument("xml")
                   .addArgument(JAVA_FILE_PATH)
             );
@@ -60,15 +86,20 @@ public class Main
 
         if (exitValue == 0)
         {
-            XmlMapper mapper = new XmlMapper();
-            CheckStyle checkStyle = mapper.readValue(stdout.toString(), CheckStyle.class);
+            JacksonXmlModule module = new JacksonXmlModule();
+            module.setDefaultUseWrapper(false);
 
-            final List<CheckStyle.TargetFile.CSError> errors = checkStyle.getTargetFile().getErrors();
+            XmlMapper xmlMapper = new XmlMapper(module);
 
-            Lists.newArrayList(errors).stream()
-                  .map(CheckStyle.TargetFile.CSError::toString)
-                  .forEach(System.out::println);
+            CheckStyle checkStyle = xmlMapper.readValue(stdout.toString(), CheckStyle.class);
 
+            List<TargetFile> ret = checkStyle.getTargetFiles().stream()
+                  .filter(file -> file.getName().endsWith(".java"))
+                  .collect(Collectors.toList());
+
+            return ret;
         }
+
+        return Lists.newArrayList();
     }
 }
